@@ -1,0 +1,171 @@
+[config]
+skip_core_tasks = true
+
+[env]
+BUILD_STABLE_TARGET = '''
+ch03/3-1/derive/sample
+ch03/3-1/iterator
+ch03/3-2/thread_safety/thread1
+ch03/3-2/thread_safety/thread2
+ch03/3-2/thread_safety/thread3
+ch03/3-2/thread_safety/thread4
+ch04/4-1
+ch04/4-2
+ch05/5-1
+ch05/5-2
+ch05/5-3
+ch05/5-4
+ch05/5-5
+ch07/7-2
+ch07/7-3
+ch07/7-4
+ch07/7-5
+ch08/8-2
+ch08/8-3
+ch08/8-4
+ch08/8-5/2_heapless
+ch08/8-5/3_panic
+ch09/9-1/1_dir/sample
+ch09/9-1/2_feature/app
+ch09/9-1/2_feature/library
+ch09/9-1/4_workspace/sample
+ch09/9-2/2_clippy/sample
+ch09/9-3/sample
+ch09/9-4/2_criterion/sample
+ch09/9-4/3_profiler/sample
+ch09/9-4/4_flamegraph/sample
+ch10/10-2/hello
+ch10/10-3/all
+ch10/10-3/codegen-units
+ch10/10-3/default
+ch10/10-3/lto
+ch10/10-3/opt-level
+ch10/10-3/panic
+ch10/10-3/strip
+ch10/10-5/hello_crev
+ch10/10-6/sum
+ch10/10-7/private_package
+ch11/11-1/1_function/sample1
+ch11/11-1/1_function/sample2
+ch11/11-1/2_derive/sample
+ch11/11-1/3_attribute/sample
+ch11/11-1/macro_sample
+ch11/11-2/addarray
+ch11/11-2/cffi
+'''
+
+BUILD_NIGHTLY_TARGET = '''
+ch08/8-5/1_alloc
+ch09/9-4/1_bench/sample
+'''
+
+TEST_STABLE_TARGET = '''
+ch03/3-5/test_code
+ch04/4-3
+ch04/4-4
+ch06/6-2/mandelbrot
+ch06/6-4/number_place
+'''
+
+[tasks.default]
+dependencies = [
+    "build-stable",
+    "build-nightly",
+    "test-stable",
+]
+
+[tasks.clean]
+script_runner = "@duckscript"
+script = [
+'''
+set_env TARGETS ${BUILD_STABLE_TARGET} ${BUILD_NIGHTLY_TARGET} ${TEST_STABLE_TARGET}
+set_env TASK cargo-clean
+cm_run_task run-tasks
+'''
+]
+
+[tasks.crago-build-stable]
+script_runner = "@shell"
+script = [
+'''
+cd ${TARGET}
+rm -f Cargo.lock
+cargo build
+'''
+]
+
+[tasks.crago-build-nightly]
+script_runner = "@shell"
+script = [
+'''
+cd ${TARGET}
+rm -f Cargo.lock
+cargo +nightly build
+'''
+]
+
+[tasks.crago-test-stable]
+script_runner = "@shell"
+script = [
+'''
+cd ${TARGET}
+rm -f Cargo.lock
+cargo test
+'''
+]
+
+[tasks.cargo-clean]
+script_runner = "@shell"
+script = [
+'''
+cd ${TARGET}
+cargo clean
+'''
+]
+
+[tasks.build-stable]
+script_runner = "@duckscript"
+script = [
+'''
+set_env TARGETS ${BUILD_STABLE_TARGET}
+set_env TASK crago-build-stable
+cm_run_task run-tasks
+'''
+]
+
+[tasks.build-nightly]
+script_runner = "@duckscript"
+script = [
+'''
+set_env TARGETS ${BUILD_NIGHTLY_TARGET}
+set_env TASK crago-build-nightly
+cm_run_task run-tasks
+'''
+]
+
+[tasks.test-stable]
+script_runner = "@duckscript"
+script = [
+'''
+set_env TARGETS ${TEST_STABLE_TARGET}
+set_env TASK crago-test-stable
+cm_run_task run-tasks
+'''
+]
+
+[tasks.run-tasks]
+script_runner = "@duckscript"
+script = [
+'''
+targets = replace ${TARGETS} \n " "
+targets = array %{targets}
+
+for target in ${targets}
+  set_env TARGET ${target}
+  echo ${target}
+  cm_run_task ${TASK}
+end
+
+release targets
+'''
+]
